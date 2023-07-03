@@ -1,0 +1,70 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS CloudFormation Sample Template WordPress_Single_Instance: WordPress
+  is web software you can use to create a beautiful website or blog. This template
+  installs WordPress with a local MySQL database for storage. It demonstrates using
+  the AWS CloudFormation bootstrap scripts to deploy WordPress. **WARNING** This template
+  creates an Amazon EC2 instance. You will be billed for the AWS resources used if
+  you create a stack from this template.'
+Parameters:
+  IAMUserName:
+    AllowedPattern: '[a-zA-Z-][a-zA-Z0-9-]*'
+    ConstraintDescription: must begin with a letter and contain only alphanumeric characters.
+    Description: The IAM User name
+    MaxLength: '24'
+    MinLength: '1'
+    Type: String
+  Reason:
+    ConstraintDescription: This is not a valid email id.
+    Default: "特定作業にひつような権限のため"
+    Description: Enter your Reason.
+    MaxLength: '164'
+    MinLength: '1'
+    Type: String
+  UserEmail:
+    AllowedPattern: '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}'
+    ConstraintDescription: This is not a valid email id.
+    Default: "abc.xyz@email.com"
+    Description: Enter your Email ID. You will be contacted by approver for more information.
+    MaxLength: '64'
+    MinLength: '1'
+    Type: String
+Resources:
+  IAMUser:
+    Type: AWS::IAM::User
+    DependsOn: 'WaitCondition'
+    Properties: 
+      UserName: !Ref IAMUserName
+  IAMUserAccessKey:
+    Type: AWS::IAM::AccessKey
+    DependsOn: 'WaitCondition'
+    Properties:
+      UserName: !Ref IAMUser
+  IAMUserAccessKeySecret:
+    Type: AWS::SecretsManager::Secret
+    DependsOn: 'WaitCondition'
+    Properties:
+      Name: !Sub ${IAMUser}-credentials
+      SecretString: !Sub "{\"accessKeyId\":\"${IAMUserAccessKey}\",\"secretAccessKey\":\"${IAMUserAccessKey.SecretAccessKey}\"}"
+
+  WaitHandle:
+    Type: 'AWS::CloudFormation::WaitConditionHandle'
+  WaitCondition:
+    Type: 'AWS::CloudFormation::WaitCondition'
+    Properties:
+      Handle:
+        Ref: 'WaitHandle'
+      Timeout: '43200'
+  NotificationFunction:
+    Type: Custom::NotificationFunction
+    Properties:
+      ServiceToken: !ImportValue SNSNotificationLambdaArn 
+      Region: !Ref "AWS::Region"
+      WaitUrl: !Ref WaitHandle
+      EmailID: !Ref UserEmail
+      Reason: !Ref Reason
+      
+Outputs:
+  CredentialStore:
+    Description: ARN of IAMUserAccessKey and SecretAccessKey
+    Value: !Ref IAMUserAccessKeySecret
+  

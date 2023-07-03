@@ -1,0 +1,24 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: '承認なしIAMユーザー作成テンプレート'
+Parameters:
+  IAMUserName:
+    AllowedPattern: '[a-zA-Z-][a-zA-Z0-9-]*'
+    ConstraintDescription: must begin with a letter and contain only alphanumeric characters.
+    Description: The IAM User name
+    MaxLength: '32'
+    MinLength: '1'
+    Type: String
+Resources:
+  IAMUser:
+    Type: AWS::IAM::User
+    Properties: 
+      UserName: !Ref IAMUserName
+  IAMUserAccessKey:
+    Type: AWS::IAM::AccessKey
+    Properties:
+      UserName: !Ref IAMUser
+  IAMUserAccessKeySecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub ${IAMUser}-credentials
+      SecretString: !Sub "{\"accessKeyId\":\"${IAMUserAccessKey}\",\"secretAccessKey\":\"${IAMUserAccessKey.SecretAccessKey}\"}"
